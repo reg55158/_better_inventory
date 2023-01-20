@@ -68,6 +68,8 @@ hook.Add("OnPlayerChat", "hellomynameiswhat", function(ply, text, _, _)
     if text != "!hello" then return end
     print("thanks for saying hello")
 
+
+    local weps = ply:GetWeapons() or {}
     local W, H = ScrW(), ScrH()
     local w, h = W / 2, H / 2
 
@@ -89,26 +91,41 @@ hook.Add("OnPlayerChat", "hellomynameiswhat", function(ply, text, _, _)
     dlabelinfo3:Dock(BOTTOM)
 
     local slots = {}
+    local wepslots = {}
 
     for i = 1, 6 do
         local layout = vgui.Create("DListLayout", f)
-        layout:SetSize(w/8, h/2)
+        layout:SetSize(w / 8, h / 2)
 
-        layout:SetPos( w/28*i + (w/8*(i-1)) , h/15 )
+        layout:SetPos( w / 28 * i + (w / 8 * (i-1)) , h / 15 )
         --Draw a background so we can see what it's doing
         layout:SetPaintBackground(true)
         layout:SetBackgroundColor(Color(2, 92, 92))
-        layout:MakeDroppable( "unique_name"..i ) -- Allows us to rearrange children
+        layout:MakeDroppable( "unique_name" .. i ) -- Allows us to rearrange children
         layout:SetSelectable(true)
 
         table.insert(slots, layout)
+        local lbl = vgui.Create("DLabel")
+            lbl:SetText(" Slot " .. i)
+            layout:Add(lbl)
+            lbl:SetSelectable(false)
+            lbl:SetColor(Color(255, 92, 92))
 
-        for ii = 1, (i+1) do
+        local tempslot = {}
+        for _, wep in ipairs( weps ) do
+            -- if wep.ClassName == "" or ! wep.ClassName then continue end
+            if wep.Slot ~= i - 1 then continue end
+            table.insert(tempslot, wep)
+        end
+
+        table.sort(tempslot, function(a, b) return a.SlotPos < b.SlotPos end)
+
+        for _, curwep in ipairs(tempslot) do
             local lbl = vgui.Create("DLabel")
-            lbl:SetText(" Label " .. ii)
-            lbl:SetName("MyNameIs"..ii)
+            lbl:SetText(" Label " .. curwep.ClassName)
+            -- lbl:SetName("MyNameIs" .. curwep)
             function lbl:DoClick() -- Defines what should happen when the label is clicked
-                dlabelinfo1:SetText(" Label " .. ii .. " from Slot " .. i .. " was pressed ")
+                dlabelinfo1:SetText(" Label " .. curwep.ClassName .. " from Slot " .. i .. " was pressed ")
             end
 
             function lbl:OnMouseReleased( mousecode )
@@ -117,41 +134,41 @@ hook.Add("OnPlayerChat", "hellomynameiswhat", function(ply, text, _, _)
 
                 if ( self:GetDisabled() ) then return end
                 if ( !self.Depressed && dragndrop.m_DraggingMain != self ) then return end
-            
+
                 if ( self.Depressed ) then
                     self.Depressed = nil
                     self:OnReleased()
                     self:InvalidateLayout( true )
                 end
-            
+
                 --
                 -- If we were being dragged then don't do the default behaviour!
                 --
                 if ( self:DragMouseRelease( mousecode ) ) then
                     -- if mousecode 
-                    dlabelinfo2:SetText(" Label " .. ii .. " from Slot " .. i .. " was pressed ")
+                    dlabelinfo2:SetText(" Label " .. curwep.ClassName .. " from Slot " .. i .. " was pressed ")
                     -- self:Remove()
                     cc , dd = f:CursorPos()
                     dlabelinfo3:SetText("Helloooo pls work" .. cc .. " " .. dd)
-                    local bb = (f:GetChildrenInRect( cc, dd, w/56, h/30))
+                    local bb = (f:GetChildrenInRect( cc, dd, w / 56, h / 30))
                     print(bb)
                     print(#bb)
                     PrintTable(bb)
                     bb[1]:Add(self)
                     return
                 end
-                
+
                 if ( self:IsSelectable() && mousecode == MOUSE_LEFT ) then
-            
+
                     local canvas = self:GetSelectionCanvas()
                     if ( canvas ) then
                         canvas:UnselectAll()
                     end
-            
+
                 end
-            
+
                 if ( !self.Hovered ) then return end
-            
+
                 --
                 -- For the purposes of these callbacks we want to
                 -- keep depressed true. This helps us out in controls
@@ -161,28 +178,29 @@ hook.Add("OnPlayerChat", "hellomynameiswhat", function(ply, text, _, _)
                 -- a label/button based control is editing is when it's depressed.
                 --
                 self.Depressed = true
-            
+
                 if ( mousecode == MOUSE_RIGHT ) then
                     self:DoRightClick()
                 end
-            
+
                 if ( mousecode == MOUSE_LEFT ) then
                     self:DoClickInternal()
                     self:DoClick()
                 end
-            
+
                 if ( mousecode == MOUSE_MIDDLE ) then
                     self:DoMiddleClick()
                 end
-            
-                self.Depressed = nil            
-                
-            end 
+
+                self.Depressed = nil
+
+            end
             -- function lbl:DoClick() -- Defines what should happen when the label is clicked
             --     dlabelinfo2:SetText(" Label " .. ii .. " from Slot " .. i .. " was pressed ")
             -- end
             lbl = layout:Add( lbl )
-            lbl.Think = function( s ) s:SetText( "ID: " .. ii .. " ZPOS: " .. s:GetZPos() ) end
+            -- lbl.Think = function( s ) s:SetText( "ID: " .. curwep.ClassName .. " ZPOS: " .. s:GetZPos() ) end
+            lbl.Think = function( s ) s:SetText( "ID: " .. curwep.ClassName .. " SlotPos " .. curwep.SlotPos ) end
             a = lbl
         end
     end
@@ -191,8 +209,8 @@ hook.Add("OnPlayerChat", "hellomynameiswhat", function(ply, text, _, _)
     local a = nil
 
 
-    layout:Find("MyNameIs1"):Remove()
-    
+    -- layout:Find("MyNameIs1"):Remove()
+
     -- local layout2 = vgui.Create("DListLayout", f)
     -- layout2:SetSize(w/10, h/2)
     -- layout2:Dock(LEFT)
@@ -200,7 +218,7 @@ hook.Add("OnPlayerChat", "hellomynameiswhat", function(ply, text, _, _)
     -- layout2:SetPaintBackground(true)
     -- layout2:SetBackgroundColor(Color(0, 100, 100))
     -- layout2:MakeDroppable( "unique_name2" ) -- Allows us to rearrange children
-    
+
     -- for i = 1, 7 do
     --     layout2:Add( Label( " Label " .. i ) )
     -- end
